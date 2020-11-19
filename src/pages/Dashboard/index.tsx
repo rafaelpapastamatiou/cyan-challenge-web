@@ -142,6 +142,8 @@ const Dashboard: React.FC = () => {
         setCurrentFile(file.id);
 
         setPoints(geographicPoints);
+
+        setCsvUrl('');
       } catch (error) {
         const err = error as AxiosError;
 
@@ -204,6 +206,7 @@ const Dashboard: React.FC = () => {
             icon={FaFileCsv}
             placeholder="CSV file url"
             onChange={e => setCsvUrl(e.target.value)}
+            value={csvUrl}
           />
           <Button onClick={storeCSV}>ADD</Button>
         </div>
