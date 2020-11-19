@@ -127,6 +127,7 @@ const Dashboard: React.FC = () => {
 
     if (!isWebUri(csvUrl)) {
       toast.error('Invalid file url.');
+      return;
     }
 
     (async () => {
@@ -135,15 +136,15 @@ const Dashboard: React.FC = () => {
           url: csvUrl,
         });
 
-        const { file, geographicPoints } = response.data;
+        const { file } = response.data;
 
-        setFiles(currentFiles => [fileToOption(file), ...currentFiles]);
+        setCsvUrl('');
 
         setCurrentFile(file.id);
 
-        setPoints(geographicPoints);
+        setFiles(currentFiles => [fileToOption(file), ...currentFiles]);
 
-        setCsvUrl('');
+        setPoints([]);
       } catch (error) {
         const err = error as AxiosError;
 
@@ -166,6 +167,7 @@ const Dashboard: React.FC = () => {
         <strong>Desafio Cyan</strong>
 
         <Select
+          testid="select-file"
           className="csv-history"
           classNamePrefix="select"
           isLoading={loadingFiles}
@@ -207,8 +209,11 @@ const Dashboard: React.FC = () => {
             placeholder="CSV file url"
             onChange={e => setCsvUrl(e.target.value)}
             value={csvUrl}
+            data-testid="csv-path-input"
           />
-          <Button onClick={storeCSV}>ADD</Button>
+          <Button onClick={storeCSV} data-testid="csv-path-button">
+            ADD
+          </Button>
         </div>
       </Header>
       <MapContainer
