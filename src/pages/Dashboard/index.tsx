@@ -12,6 +12,10 @@ import { toast } from 'react-toastify';
 
 import { isWebUri } from 'valid-url';
 
+import { AxiosError } from 'axios';
+
+import { parseISO } from 'date-fns';
+
 import api from '../../services/api';
 
 import { Container, MapContainer, Header, Select } from './styles';
@@ -21,7 +25,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 
 interface IOption {
-  value: string | number;
+  value: string;
   label: string;
 }
 
@@ -59,6 +63,13 @@ const Dashboard: React.FC = () => {
 
   const [csvUrl, setCsvUrl] = useState<string>('');
 
+  const fileToOption = (file: ICSVFile): IOption => {
+    return {
+      label: `${parseISO(file.createdAt).toLocaleString()} - ${file.url}`,
+      value: file.id,
+    };
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -68,13 +79,23 @@ const Dashboard: React.FC = () => {
 
         setLoadingFiles(false);
 
-        setFiles(filesData.map(file => ({ label: file.url, value: file.id })));
+        setFiles(filesData.map(file => fileToOption(file)));
 
         if (filesData.length > 0) {
           const newestFileId = filesData[0].id;
           setCurrentFile(newestFileId);
         }
-      } catch (err) {
+      } catch (error) {
+        const err = error as AxiosError;
+
+        if (err.response) {
+          const { message } = err.response.data;
+          if (message) {
+            toast.error(message);
+            return;
+          }
+        }
+
         toast.error('An error occurred while loading csv files history.');
       }
     })();
@@ -89,7 +110,7 @@ const Dashboard: React.FC = () => {
           const { data: pointsData } = response;
 
           setPoints(pointsData);
-        } catch (err) {
+        } catch (error) {
           toast.error(
             'An error occurred while loading geographic points of the specified csv file.',
           );
@@ -109,20 +130,31 @@ const Dashboard: React.FC = () => {
     }
 
     (async () => {
-      const response = await api.post<IStoreFileResponse>('/files', {
-        url: csvUrl,
-      });
+      try {
+        const response = await api.post<IStoreFileResponse>('/files', {
+          url: csvUrl,
+        });
 
-      const { file, geographicPoints } = response.data;
+        const { file, geographicPoints } = response.data;
 
-      setFiles(currentFiles => [
-        ...currentFiles,
-        { value: file.id, label: file.url },
-      ]);
+        setFiles(currentFiles => [fileToOption(file), ...currentFiles]);
 
-      setCurrentFile(file.id);
+        setCurrentFile(file.id);
 
-      setPoints(geographicPoints);
+        setPoints(geographicPoints);
+      } catch (error) {
+        const err = error as AxiosError;
+
+        if (err.response) {
+          const { message } = err.response.data;
+          if (message) {
+            toast.error(message);
+            return;
+          }
+        }
+
+        toast.error('Error while importing csv file data.');
+      }
     })();
   }, [csvUrl]);
 
@@ -142,9 +174,9 @@ const Dashboard: React.FC = () => {
           menuPortalTarget={document.body}
           menuPlacement="bottom"
           menuPosition="absolute"
-          onChange={(file: ICSVFile) =>
-            setCurrentFile(file ? file.id : undefined)
-          }
+          onChange={(file: IOption) => {
+            return setCurrentFile(file ? file.value : undefined);
+          }}
           value={files.find(file => file.value === currentFile)}
           simpleValue
           styles={{
